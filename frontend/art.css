@@ -1,0 +1,64 @@
+/* 기본 배경 스타일 */
+body {
+    margin: 0;
+    background: #111;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* 전체 컨테이너 */
+#container {
+    position: relative;
+    width: 1280px;
+    height: 720px;
+}
+
+/* 메인 캔버스 */
+#artCanvas {
+    width: 1280px;
+    height: 720px;
+    background-color: #000;
+    display: block;
+}
+
+/* 카메라 미리보기 */
+#cameraPreview {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 220px;
+    height: 165px;
+    object-fit: cover;
+    border-radius: 10px;
+    border: 2px solid rgba(255,255,255,0.3);
+    box-shadow: 0 0 10px rgba(0,0,0,0.4);
+}
+
+/* 하단 버튼 영역 */
+#controls {
+    position: absolute;
+    bottom: -60px;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+}
+
+/* 버튼 스타일 */
+#controls button {
+    padding: 10px 20px;
+    font-size: 16px;
+    background: #222;
+    color: white;
+    border: 1px solid #555;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+#controls button:hover {
+    background: #333;
+}
