@@ -1,64 +1,118 @@
-/* 기본 배경 스타일 */
+/* 전체 배경 */
 body {
-    margin: 0;
-    background: #111;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-    overflow: hidden;
+  margin: 0;
+  background: #111;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  overflow: hidden;
 }
 
-/* 전체 컨테이너 */
+/* 메인 컨테이너 (캔버스 기준 1280x720) */
 #container {
-    position: relative;
-    width: 1280px;
-    height: 720px;
+  position: relative;
+  width: 1280px;
+  height: 720px;
 }
 
 /* 메인 캔버스 */
 #artCanvas {
-    width: 1280px;
-    height: 720px;
-    background-color: #000;
-    display: block;
+  width: 1280px;
+  height: 720px;
+  background-color: #000;
+  display: block;
+  cursor: crosshair;
 }
 
 /* 카메라 미리보기 */
 #cameraPreview {
-    position: absolute;
-    top: 20px;
-    right: 20px;
-    width: 220px;
-    height: 165px;
-    object-fit: cover;
-    border-radius: 10px;
-    border: 2px solid rgba(255,255,255,0.3);
-    box-shadow: 0 0 10px rgba(0,0,0,0.4);
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 220px;
+  height: 165px;
+  object-fit: cover;
+  border-radius: 12px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.4);
+  z-index: 10;
 }
 
-/* 하단 버튼 영역 */
+/* 상태 표시 */
+#statusDisplay {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  background: rgba(0, 0, 0, 0.7);
+  color: #0f0;
+  padding: 10px 15px;
+  border-radius: 8px;
+  font-family: monospace;
+  font-size: 14px;
+  z-index: 10;
+}
+
+/* 하단 컨트롤 버튼 영역 */
 #controls {
-    position: absolute;
-    bottom: -60px;
-    width: 100%;
-    display: flex;
-    justify-content: center;
-    gap: 20px;
+  position: absolute;
+  bottom: -60px;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  gap: 20px;
 }
 
-/* 버튼 스타일 */
+/* 버튼 공통 스타일 */
 #controls button {
-    padding: 10px 20px;
-    font-size: 16px;
-    background: #222;
-    color: white;
-    border: 1px solid #555;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: 0.2s;
+  padding: 12px 22px;
+  font-size: 16px;
+  background: #222;
+  color: white;
+  border: 1px solid #555;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: 0.2s;
 }
 
 #controls button:hover {
-    background: #333;
+  background: #333;
+  border-color: #777;
+}
+
+#controls button:active {
+  background: #444;
+}
+
+/* 9점 캘리브레이션 오버레이 */
+#calibrationOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1280px;
+  height: 720px;
+  pointer-events: none;
+  z-index: 100;
+}
+
+/* 캘리브레이션 점 */
+.calib-point {
+  width: 35px;
+  height: 35px;
+  background: radial-gradient(circle, #ff0000 0%, #ff0000 50%, transparent 70%);
+  border-radius: 50%;
+  position: absolute;
+  transform: translate(-50%, -50%);
+  opacity: 0;
+  transition: opacity 0.3s;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.2);
+  }
 }

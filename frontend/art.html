@@ -1,29 +1,36 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interactive Art</title>
-    <script src="https://cdn.jsdelivr.net/npm/webgazer@2.0.0/dist/webgazer.min.js"></script>
-    <link rel="stylesheet" href="art.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gaze Interactive Art</title>
+
+  <!-- WebGazer 라이브러리 (브라운대 공식) -->
+  <script src="https://webgazer.cs.brown.edu/webgazer.js"></script>
+
+  <link rel="stylesheet" href="art.css" />
 </head>
 <body>
+  <div id="container">
+    <!-- 메인 아트 캔버스 -->
+    <canvas id="artCanvas" width="1280" height="720"></canvas>
 
-    <div id="container">
+    <!-- 카메라 미리보기 -->
+    <video id="cameraPreview" autoplay playsinline muted></video>
 
-        <!-- 메인 아트 캔버스 -->
-        <canvas id="artCanvas" width="1280" height="720"></canvas>
+    <!-- 상태 표시 -->
+    <div id="statusDisplay"></div>
 
-        <!-- 카메라 미리보기 -->
-        <video id="cameraPreview" autoplay playsinline></video>
-
-        <!-- 컨트롤 버튼 -->
-        <div id="controls">
-            <button id="resetBtn">Reset</button>
-            <button id="calibrateBtn">Calibrate</button>
-        </div>
-
+    <!-- 하단 컨트롤 -->
+    <div id="controls">
+      <button id="resetBtn">Reset</button>
+      <button id="calibrateBtn">Calibrate (9점)</button>
     </div>
 
+    <!-- 9점 캘리브레이션 오버레이 -->
+    <div id="calibrationOverlay"></div>
+  </div>
+
+  <script src="script.js"></script>
 </body>
 </html>
