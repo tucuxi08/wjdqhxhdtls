@@ -1,31 +1,48 @@
 // ================================
-// 1) Canvas & 기본 마스크 설정
+// 1) Canvas 설정 (2개 레이어)
 // ================================
 const canvas = document.getElementById("artCanvas");
 const ctx = canvas.getContext("2d");
 
+// 오프스크린 캔버스 생성 (배경용)
+const bgCanvas = document.createElement('canvas');
+bgCanvas.width = canvas.width;
+bgCanvas.height = canvas.height;
+const bgCtx = bgCanvas.getContext('2d');
+
 // 브러시 설정
-const brushSize = 100;
+const brushSize = 20;
 const brushOpacity = 1.0;
 
 // 상태 관리
 let isGazerReady = false;
 let isTracking = false;
-let currentGazeX = null;
-let currentGazeY = null;
 
-// 초기 마스크: 전체를 검은색으로 채워서 "덮힌 상태"로 시작
+// 스무딩을 위한 좌표 버퍼
+const SMOOTHING_FRAMES = 5; // 최근 5개 프레임 평균
+let gazeHistory = [];
+let lastGazeX = null;
+let lastGazeY = null;
+
+// 움직임 임계값 (픽셀)
+const MOVEMENT_THRESHOLD = 15; // 15픽셀 이상 움직여야 브러시 적용
+
+// 초기 설정
 function fillMask() {
-  ctx.globalCompositeOperation = "source-over";
-  ctx.fillStyle = "#000";
+  // 배경 캔버스: 파란색
+  bgCtx.fillStyle = "#0066FF";
+  bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
+  
+  // 메인 캔버스: 빨간색 마스크
+  ctx.fillStyle = "rgba(204, 42, 190, 1)";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 }
 fillMask();
 
-console.log("✅ 초기 마스크 생성 완료");
+console.log("✅ 초기 마스크 생성 완료 (부드러운 브러시 버전)");
 
 // ================================
-// 2) 시선 추적 점 표시 (NEW!)
+// 2) 시선 추적 점 표시
 // ================================
 const gazePointer = document.createElement('div');
 gazePointer.id = 'gazePointer';
@@ -33,14 +50,15 @@ gazePointer.style.cssText = `
   position: fixed;
   width: 20px;
   height: 20px;
-  background: red;
+  background: lime;
   border: 2px solid white;
   border-radius: 50%;
   pointer-events: none;
   z-index: 9999;
   transform: translate(-50%, -50%);
   display: none;
-  box-shadow: 0 0 10px rgba(255,0,0,0.5);
+  box-shadow: 0 0 10px rgba(0,255,0,0.8);
+  transition: all 0.1s ease-out;
 `;
 document.body.appendChild(gazePointer);
 
@@ -90,23 +108,19 @@ async function initWebGazer() {
   try {
     updateStatus('WebGazer 초기화 중...', 'yellow');
     
-    // 마우스 데이터를 학습에 사용하지 않도록
     webgazer.params.collectMouseData = false;
     
-    // WebGazer 시작 (await로 완료 대기)
     await webgazer
       .setTracker("TFFacemesh")
       .setRegression("ridge")
       .begin();
     
-    // WebGazer UI 완전히 숨기기
     webgazer
       .showVideoPreview(false)
       .showFaceOverlay(false)
       .showPredictionPoints(false)
       .showFaceFeedbackBox(false);
     
-    // WebGazer의 내부 비디오 요소 숨기기
     setTimeout(() => {
       const webgazerVideoElements = document.querySelectorAll(
         '#webgazerVideoFeed, #webgazerVideoCanvas, #webgazerFaceOverlay, #webgazerFaceFeedbackBox'
@@ -126,10 +140,52 @@ async function initWebGazer() {
 }
 
 // ================================
-// 6) 브러시: 시선 위치를 기준으로 마스크를 "지우기"
+// 6) 좌표 스무딩 함수
+// ================================
+function smoothGaze(x, y) {
+  // 히스토리에 추가
+  gazeHistory.push({ x, y });
+  
+  // 최근 N개만 유지
+  if (gazeHistory.length > SMOOTHING_FRAMES) {
+    gazeHistory.shift();
+  }
+  
+  // 평균 계산
+  let sumX = 0, sumY = 0;
+  gazeHistory.forEach(pos => {
+    sumX += pos.x;
+    sumY += pos.y;
+  });
+  
+  return {
+    x: sumX / gazeHistory.length,
+    y: sumY / gazeHistory.length
+  };
+}
+
+// ================================
+// 7) 두 점 사이를 보간하여 브러시 적용
+// ================================
+function drawLine(x1, y1, x2, y2) {
+  const distance = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
+  const steps = Math.ceil(distance / (brushSize * 0.3)); // 브러시 크기의 30%씩 이동
+  
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    const x = x1 + (x2 - x1) * t;
+    const y = y1 + (y2 - y1) * t;
+    eraseAt(x, y);
+  }
+}
+
+// ================================
+// 8) 브러시: 마스크를 지우면서 배경 드러내기
 // ================================
 function eraseAt(x, y) {
-  console.log(`🖌️ 브러시 적용: (${Math.round(x)}, ${Math.round(y)})`);
+  // 메인 캔버스의 해당 부분을 지움
+  ctx.save();
+  ctx.globalCompositeOperation = "destination-out";
   
   // Radial Gradient로 부드러운 브러시
   const gradient = ctx.createRadialGradient(x, y, 0, x, y, brushSize);
@@ -137,15 +193,21 @@ function eraseAt(x, y) {
   gradient.addColorStop(0.5, `rgba(0, 0, 0, ${brushOpacity * 0.6})`);
   gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
   
-  ctx.globalCompositeOperation = "destination-out";
   ctx.fillStyle = gradient;
   ctx.beginPath();
   ctx.arc(x, y, brushSize, 0, Math.PI * 2);
   ctx.fill();
+  ctx.restore();
+  
+  // 배경을 그 위에 그림
+  ctx.save();
+  ctx.globalCompositeOperation = "destination-over";
+  ctx.drawImage(bgCanvas, 0, 0);
+  ctx.restore();
 }
 
 // ================================
-// 7) WebGazer 시선 → 캔버스 좌표 변환 후 브러시 적용
+// 9) WebGazer 시선 → 부드러운 브러시 적용
 // ================================
 function followGaze() {
   if (!isGazerReady || !isTracking) return;
@@ -153,42 +215,69 @@ function followGaze() {
   webgazer.getCurrentPrediction().then((prediction) => {
     if (!prediction) return;
 
-    // 화면 좌표 업데이트 (빨간 점 표시)
+    // 화면 좌표 업데이트 (초록 점 - 원본)
     updateGazePointer(prediction.x, prediction.y);
     
-    // prediction.x, y는 "화면(viewport)" 기준 좌표
+    // 캔버스 좌표로 변환
     const rect = canvas.getBoundingClientRect();
-    const cx = prediction.x - rect.left;
-    const cy = prediction.y - rect.top;
+    let cx = prediction.x - rect.left;
+    let cy = prediction.y - rect.top;
     
-    // 현재 시선 좌표 저장
-    currentGazeX = cx;
-    currentGazeY = cy;
-
     // 캔버스 범위 체크
     if (cx < 0 || cy < 0 || cx > canvas.width || cy > canvas.height) return;
-
-    eraseAt(cx, cy);
+    
+    // 스무딩 적용
+    const smoothed = smoothGaze(cx, cy);
+    cx = smoothed.x;
+    cy = smoothed.y;
+    
+    // 이전 위치가 있으면
+    if (lastGazeX !== null && lastGazeY !== null) {
+      // 움직임 거리 계산
+      const distance = Math.sqrt(
+        (cx - lastGazeX) ** 2 + (cy - lastGazeY) ** 2
+      );
+      
+      // 임계값 이상 움직였을 때만 브러시 적용
+      if (distance >= MOVEMENT_THRESHOLD) {
+        console.log(`🖌️ 브러시 적용: (${Math.round(cx)}, ${Math.round(cy)}) 거리: ${Math.round(distance)}px`);
+        
+        // 이전 위치와 현재 위치 사이를 보간하여 그리기
+        drawLine(lastGazeX, lastGazeY, cx, cy);
+        
+        // 현재 위치 저장
+        lastGazeX = cx;
+        lastGazeY = cy;
+      }
+    } else {
+      // 첫 번째 위치
+      lastGazeX = cx;
+      lastGazeY = cy;
+      eraseAt(cx, cy);
+    }
   });
 }
 
-// 50ms마다 시선 좌표 읽어서 브러시 적용
-setInterval(followGaze, 50);
+// 더 느린 업데이트 (100ms = 초당 10회)
+setInterval(followGaze, 100);
 
 // ================================
-// 8) Reset 버튼: 마스크 초기화
+// 10) Reset 버튼
 // ================================
 document.getElementById("resetBtn").addEventListener("click", () => {
   fillMask();
+  gazeHistory = [];
+  lastGazeX = null;
+  lastGazeY = null;
   updateStatus('캔버스 리셋 완료', '#0f0');
+  console.log("🔄 리셋");
 });
 
 // ================================
-// 9) 9점 캘리브레이션
+// 11) 9점 캘리브레이션
 // ================================
 const calibrationOverlay = document.getElementById("calibrationOverlay");
 
-// (0~1) 비율 좌표로 9점 정의
 const calibrationPoints = [
   [0.15, 0.15], [0.5, 0.15], [0.85, 0.15],
   [0.15, 0.5],  [0.5, 0.5],  [0.85, 0.5],
@@ -210,9 +299,11 @@ async function runCalibration() {
     return;
   }
   
-  // 추적 일시 중지
   isTracking = false;
   gazePointer.style.display = 'none';
+  gazeHistory = [];
+  lastGazeX = null;
+  lastGazeY = null;
   
   calibrationOverlay.innerHTML = "";
   calibrationOverlay.style.pointerEvents = "auto";
@@ -223,7 +314,6 @@ async function runCalibration() {
 
   updateStatus('캘리브레이션 진행 중... (9점)', 'yellow');
 
-  // 9점 순서대로 표시
   for (let i = 0; i < calibrationPoints.length; i++) {
     const [nx, ny] = calibrationPoints[i];
     const x = nx * w;
@@ -234,10 +324,8 @@ async function runCalibration() {
     
     updateStatus(`캘리브레이션 ${i + 1}/9`, 'yellow');
 
-    // 클릭 이벤트 대기
     await new Promise((resolve) => {
       setTimeout(() => {
-        // 화면 좌표로 클릭 이벤트 생성
         const screenX = rect.left + x;
         const screenY = rect.top + y;
         
@@ -250,15 +338,12 @@ async function runCalibration() {
         });
         
         canvas.dispatchEvent(clickEvent);
-        
-        // WebGazer에 수동으로 캘리브레이션 포인트 기록
         webgazer.recordScreenPosition(screenX, screenY, 'click');
         
         resolve();
       }, 1500);
     });
 
-    // 점 숨기기
     dot.style.opacity = 0;
     await new Promise((res) => setTimeout(res, 300));
   }
@@ -266,7 +351,6 @@ async function runCalibration() {
   calibrationOverlay.innerHTML = "";
   calibrationOverlay.style.pointerEvents = "none";
   
-  // 추적 재개
   isTracking = true;
   gazePointer.style.display = 'block';
   
@@ -277,7 +361,7 @@ async function runCalibration() {
 document.getElementById("calibrateBtn").addEventListener("click", runCalibration);
 
 // ================================
-// 10) 초기화 실행
+// 12) 초기화 실행
 // ================================
 async function init() {
   console.log("🚀 초기화 시작");
@@ -288,27 +372,36 @@ async function init() {
   
   updateStatus('준비 완료! Calibrate 클릭', '#0f0');
   console.log("✅ 모든 초기화 완료");
+  console.log("🎨 부드러운 브러시 설정:");
+  console.log(`   - 스무딩 프레임: ${SMOOTHING_FRAMES}`);
+  console.log(`   - 움직임 임계값: ${MOVEMENT_THRESHOLD}px`);
+  console.log(`   - 업데이트 주기: 100ms (초당 10회)`);
 }
 
-// 페이지 로드 시 초기화
 window.addEventListener('load', init);
 
 // ================================
-// 11) 디버깅: 마우스 테스트
+// 13) 마우스 테스트 (부드러운 버전)
 // ================================
 let isMouseDown = false;
+let lastMouseX = null;
+let lastMouseY = null;
 
 canvas.addEventListener('mousedown', (e) => {
   isMouseDown = true;
   const rect = canvas.getBoundingClientRect();
   const x = e.clientX - rect.left;
   const y = e.clientY - rect.top;
+  lastMouseX = x;
+  lastMouseY = y;
   console.log(`🖱️ 마우스 클릭: (${Math.round(x)}, ${Math.round(y)})`);
   eraseAt(x, y);
 });
 
 canvas.addEventListener('mouseup', () => {
   isMouseDown = false;
+  lastMouseX = null;
+  lastMouseY = null;
 });
 
 canvas.addEventListener('mousemove', (e) => {
@@ -316,9 +409,17 @@ canvas.addEventListener('mousemove', (e) => {
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    eraseAt(x, y);
+    
+    // 마우스도 보간 적용
+    if (lastMouseX !== null && lastMouseY !== null) {
+      drawLine(lastMouseX, lastMouseY, x, y);
+    }
+    
+    lastMouseX = x;
+    lastMouseY = y;
   }
 });
 
-console.log("💡 Tip: 마우스를 클릭&드래그하면 브러시 테스트 가능");
-console.log("👁️ Tip: 빨간 점이 시선 위치를 표시합니다");
+console.log("💡 Tip: 마우스를 클릭&드래그하면 부드러운 브러시 테스트");
+console.log("👁️ Tip: 초록색 점은 원본 시선, 브러시는 스무딩된 위치");
+console.log("🎯 개선사항: 스무딩 + 임계값 + 보간 = 부드러운 브러시!");

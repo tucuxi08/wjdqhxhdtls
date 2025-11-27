@@ -16,11 +16,10 @@ body {
   height: 720px;
 }
 
-/* 메인 캔버스 */
+/* 메인 캔버스 - background-color 제거! */
 #artCanvas {
   width: 1280px;
   height: 720px;
-  background-color: #000;
   display: block;
   cursor: crosshair;
 }
