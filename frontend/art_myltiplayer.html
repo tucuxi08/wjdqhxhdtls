@@ -3,11 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Gaze Interactive Art</title>
+  <title>멀티유저 시선 추적 캔버스</title>
 
   <!-- WebGazer 라이브러리 (브라운대 공식) -->
   <script src="https://webgazer.cs.brown.edu/webgazer.js"></script>
 
+  
+  <!-- Socket.IO 클라이언트 라이브러리 -->
+  <script src="/socket.io/socket.io.js"></script>
   <link rel="stylesheet" href="art.css" />
 </head>
 <body>
@@ -31,6 +34,6 @@
     <div id="calibrationOverlay"></div>
   </div>
 
-  <script src="script.js"></script>
+  <script src="script_multiplayer.js"></script>
 </body>
 </html>

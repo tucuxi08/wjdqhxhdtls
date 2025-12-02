@@ -9,28 +9,31 @@ body {
   overflow: hidden;
 }
 
-/* 메인 컨테이너 (캔버스 기준 1280x720) */
+/* 메인 컨테이너 - 화면 크기에 맞게 자동 축소 */
 #container {
   position: relative;
-  width: 1280px;
-  height: 720px;
+  width: 1920px;
+  height: 1080px;
+  max-width: 95vw;
+  max-height: 90vh;
 }
 
-/* 메인 캔버스 - background-color 제거! */
+/* 메인 캔버스 - 컨테이너 크기에 맞춤 */
 #artCanvas {
-  width: 1280px;
-  height: 720px;
+  width: 100%;
+  height: 100%;
   display: block;
   cursor: crosshair;
 }
 
-/* 카메라 미리보기 */
+/* 카메라 미리보기 - 비율 유지 */
 #cameraPreview {
   position: absolute;
-  top: 20px;
-  right: 20px;
-  width: 220px;
-  height: 165px;
+  top: 2%;
+  right: 2%;
+  width: 12%;
+  max-width: 220px;
+  aspect-ratio: 4/3;
   object-fit: cover;
   border-radius: 12px;
   border: 2px solid rgba(255, 255, 255, 0.3);
@@ -38,11 +41,11 @@ body {
   z-index: 10;
 }
 
-/* 상태 표시 */
+/* 상태 표시 - 비율 유지 */
 #statusDisplay {
   position: absolute;
-  top: 20px;
-  left: 20px;
+  top: 2%;
+  left: 2%;
   background: rgba(0, 0, 0, 0.7);
   color: #0f0;
   padding: 10px 15px;
@@ -52,14 +55,15 @@ body {
   z-index: 10;
 }
 
-/* 하단 컨트롤 버튼 영역 */
+/* 하단 컨트롤 버튼 - 화면 안쪽 하단 */
 #controls {
   position: absolute;
-  bottom: -60px;
-  width: 100%;
+  bottom: 3%;
+  left: 50%;
+  transform: translateX(-50%);
   display: flex;
-  justify-content: center;
   gap: 20px;
+  z-index: 10;
 }
 
 /* 버튼 공통 스타일 */
@@ -88,16 +92,16 @@ body {
   position: absolute;
   top: 0;
   left: 0;
-  width: 1280px;
-  height: 720px;
+  width: 100%;
+  height: 100%;
   pointer-events: none;
   z-index: 100;
 }
 
-/* 캘리브레이션 점 */
+/* 캘리브레이션 점 - 화면 크기에 비례 */
 .calib-point {
-  width: 35px;
-  height: 35px;
+  width: 50px;
+  height: 50px;
   background: radial-gradient(circle, #ff0000 0%, #ff0000 50%, transparent 70%);
   border-radius: 50%;
   position: absolute;
